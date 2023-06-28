@@ -25,7 +25,7 @@ jobs:
           version: '>=410.0.0'
       - name: Configure credential helper for Docker
         run: |
-          gcloud --quiet auth configure-docker ${{ secrets.CONTAINER_REGISTRY_HOST }}
+          gcloud --quiet auth configure-docker ${{ vars.CONTAINER_REGISTRY_HOST }}
       - name: Tag dev build as production ready
         run: |
           docker pull ${{ secrets.CONTAINER_IMAGE_NAME }}:${{ github.sha }}
@@ -43,6 +43,6 @@ jobs:
         shell: bash
         run: |
           pushd kustomize/overlay/prod
-          kustomize edit set namespace ${{ secrets.K8S_PROD_NS }}
-          kustomize edit set image wildfly-image=${{ secrets.CONTAINER_IMAGE_NAME }}:${{ github.ref_name }}
-          kustomize build . | kubectl apply -f -
+          ./kustomize edit set namespace ${{ secrets.K8S_PROD_NS }}
+          ./kustomize edit set image wildfly-image=${{ secrets.CONTAINER_IMAGE_NAME }}:${{ github.ref_name }}
+          ./kustomize build . | kubectl apply -f -
