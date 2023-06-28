@@ -8,9 +8,11 @@ spec:
   selector:
     app: wildfly-ap
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 80
       targetPort: 8080
-    # - protocol: TCP
+    # - name: http-admin
+    #   protocol: TCP
     #   port: 9990
     #   targetPort: 9990

@@ -20,8 +20,10 @@ spec:
         - name: wildfly-ap
           image: wildfly-image
           ports:
-            - containerPort: 8080
-            - containerPort: 9990
+            - name: http
+              containerPort: 8080
+            - name: admin-http
+              containerPort: 9990
           resources:
             limits:
               cpu: "1000m"
