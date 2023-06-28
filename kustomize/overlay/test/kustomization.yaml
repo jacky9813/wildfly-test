@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+  - ./managed-certificate.yaml
+
+patches:
+  - target:
+      kind: Ingress
+      name: wildfly-ingress
+    # See https://datatracker.ietf.org/doc/html/rfc6902 for format specification of JSON patch
+    patch: |-
+      - op: remove
+        path: /metadata/annotations/kubernetes.io~1ingress.global-static-ip-name
+        # value: wildfly-prod-ip-address
+      - op: remove
+        path: /metadata/annotations/ingress.gcp.kubernetes.io~1pre-shared-cert
+        # value: wildfly-prod-certificate
+      - op: remove
+        path: /spec/tls
+      - op: replace
+        path: /metadata/annotations/networking.gke.io~1managed-certificates
+        value: wildfly-test-certificate

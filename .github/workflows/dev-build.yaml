@@ -1,0 +1,51 @@
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  id-token: write
+
+jobs:
+  build-container:
+    name: Build and push container image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Login to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIP }}
+          service_account: ${{ secrets.GCP_SA }}
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          version: '>=410.0.0'
+      - name: Configure credential helper for Docker
+        run: |
+          gcloud --quiet auth configure-docker
+      - name: Setup Docker Buildx (Buildkit)
+        uses: docker/setup-buildx-action@v2
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ secrets.CONTAINER_IMAGE_NAME }}:${{ github.sha }}
+      - name: Configure kubectl
+        uses: google-github-actions/get-gke-credentials@v1
+        with:
+          cluster_name: ${{ secrets.GCP_GKE_CLUSTER }}
+          location: ${{ secrets.GCP_GKE_LOCATION }}
+      - name: Install Kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+      - name: Deploy to test namespace
+        shell: bash
+        run: |
+          pushd kustomize/overlay/test
+          kustomize edit set namespace ${{ secrets.K8S_TEST_NS }}
+          kustomize edit set image wildfly-image=${{ secrets.CONTAINER_IMAGE_NAME }}:${{ github.sha }}
+          kustomize build . | kubectl apply -f -

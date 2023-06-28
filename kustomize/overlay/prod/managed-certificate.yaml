@@ -1,0 +1,8 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: wildfly-prod-certificate
+  namespace: wildfly
+spec:
+  domains:
+    - wildfly.gcp.jackyccc.tw
