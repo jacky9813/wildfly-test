@@ -11,12 +11,15 @@ patches:
       name: wildfly-ingress
     # See https://datatracker.ietf.org/doc/html/rfc6902 for format specification of JSON patch
     patch: |-
-      - op: remove
+      # Ingress IP Address
+      - op: replace
         path: /metadata/annotations/kubernetes.io~1ingress.global-static-ip-name
-        # value: wildfly-prod-ip-address
+        value: wildfly-test-ip-address
+      
+      # SSL/TLS Certificate
       - op: remove
         path: /metadata/annotations/ingress.gcp.kubernetes.io~1pre-shared-cert
-        # value: wildfly-prod-certificate
+        # value: wildfly-test-certificate
       - op: remove
         path: /spec/tls
       - op: replace

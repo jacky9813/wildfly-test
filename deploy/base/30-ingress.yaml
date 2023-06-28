@@ -7,10 +7,10 @@ metadata:
     ingress.gcp.kubernetes.io/pre-shared-cert: uploaded-certificate
     networking.gke.io/managed-certificates: google-managed-certificate
     kubernetes.io/ingress.global-static-ip-name: wildfly-ip-address
+    kubernetes.io/ingress.class: "gce"
 spec:
   tls:
     - secretName: TLS-CERTIFICATE-SECRET-NAME
-  ingressClassName: gce
   defaultBackend:
     service:
       name: wildfly-service
