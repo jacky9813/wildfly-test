@@ -43,7 +43,7 @@ jobs:
       - name: Deploy to test namespace
         shell: bash
         run: |
-          pushd kustomize/overlay/prod
+          pushd deploy/overlay/prod
           ./kustomize edit set namespace ${{ secrets.K8S_PROD_NS }}
           ./kustomize edit set image wildfly-image=${{ vars.CONTAINER_REGISTRY_HOST }}/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REGISTRY_NAME }}/${{ vars.CONTAINER_IMAGE_NAME }}:${{ github.ref_name }}
           ./kustomize build . | kubectl apply -f -
