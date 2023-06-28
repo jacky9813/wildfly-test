@@ -30,9 +30,12 @@ jobs:
       - name: Setup Docker Buildx (Buildkit)
         uses: docker/setup-buildx-action@v2
       - name: Build and push
-        run : |
-          docker build -t ${{ vars.CONTAINER_REGISTRY_HOST }}/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REGISTRY_NAME }}/${{ vars.CONTAINER_IMAGE_NAME }}:${{ github.sha }} .
-          docker push ${{ vars.CONTAINER_REGISTRY_HOST }}/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REGISTRY_NAME }}/${{ vars.CONTAINER_IMAGE_NAME }}:${{ github.sha }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ vars.CONTAINER_REGISTRY_HOST }}/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REGISTRY_NAME }}/${{ vars.CONTAINER_IMAGE_NAME }}:${{ github.sha }}
       - name: Configure kubectl
         uses: google-github-actions/get-gke-credentials@v1
         with:
