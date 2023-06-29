@@ -33,7 +33,7 @@ build-and-push:
     - if: $DEPLOY_MODE == "dev"
       when: always
   stage: build
-  image: gcr.io/cloud-builders/docker
+  image: google/cloud-sdk
   before_script:
     # Login to GCP
     - echo ${CI_JOB_JWT_V2} > .ci_job_jwt_file
@@ -86,7 +86,7 @@ prod-tag:
     - if: $DEPLOY_MODE == "prod"
       when: always
   stage: prod-tag
-  image: gcr.io/cloud-builders/docker
+  image: gcr.io/cloud-builders/gcloud
   before_script:
     # Login to GCP
     - echo ${CI_JOB_JWT_V2} > .ci_job_jwt_file
