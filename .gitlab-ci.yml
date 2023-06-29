@@ -41,6 +41,8 @@ build-and-push:
   services:
     - name: docker:dind
       alias: docker
+      # docker:dind requires privileged GitLab Runner
+      # As GKE autopilot blocks privileged container, you may failed to start docker:dind with GKE Autopilot.
   variables:
     DOCKER_HOST: tcp://docker:2376
     DOCKER_TLS_CERTDIR: "/certs"
