@@ -34,7 +34,7 @@ build-and-push:
       when: always
   stage: build
   image: google/cloud-sdk
-  
+
   # For running docker in Kubernetes, the following settings are required.
   # See https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-the-kubernetes-executor-with-docker-in-docker
   # for more details.
@@ -125,7 +125,7 @@ prod-deploy:
       when: on_success
   needs:
     - prod-tag
-  stage: dev-deploy
+  stage: prod-deploy
   image: 
     name: gcr.io/cloud-builders/kubectl
     entrypoint:
