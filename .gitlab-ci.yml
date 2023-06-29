@@ -94,11 +94,10 @@ dev-deploy:
     # Download Kustomize
     - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
   script:
-    - export PATH="$PATH:$(pwd)"
     - pushd deploy/overlay/test
-    - ./kustomize edit set namespace ${K8S_TEST_NS}
-    - ./kustomize edit set image wildfly-image=${CONTAINER_REGISTRY_HOST}/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REGISTRY_NAME}/${CONTAINER_IMAGE_NAME}:${CI_COMMIT_SHA}
-    - ./kustomize build . | kubectl apply -f -
+    - ${CI_PROJECT_DIR}/kustomize edit set namespace ${K8S_TEST_NS}
+    - ${CI_PROJECT_DIR}/kustomize edit set image wildfly-image=${CONTAINER_REGISTRY_HOST}/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REGISTRY_NAME}/${CONTAINER_IMAGE_NAME}:${CI_COMMIT_SHA}
+    - ${CI_PROJECT_DIR}/kustomize build . | kubectl apply -f -
 
 prod-tag:
   rules:
@@ -148,8 +147,7 @@ prod-deploy:
     # Download Kustomize
     - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
   script:
-    - export PATH="$PATH:$(pwd)"
     - pushd deploy/overlay/test
-    - ./kustomize edit set namespace ${K8S_PROD_NS}
-    - ./kustomize edit set image wildfly-image=${CONTAINER_REGISTRY_HOST}/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REGISTRY_NAME}/${CONTAINER_IMAGE_NAME}:${CI_COMMIT_TAG}
-    - ./kustomize build . | kubectl apply -f -
+    - ${CI_PROJECT_DIR}/kustomize edit set namespace ${K8S_PROD_NS}
+    - ${CI_PROJECT_DIR}/kustomize edit set image wildfly-image=${CONTAINER_REGISTRY_HOST}/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REGISTRY_NAME}/${CONTAINER_IMAGE_NAME}:${CI_COMMIT_TAG}
+    - ${CI_PROJECT_DIR}/kustomize build . | kubectl apply -f -
