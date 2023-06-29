@@ -40,7 +40,8 @@ services:
   - docker:dind
 image: docker:cli
 before_script:
-  - docker info
+  # https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27215#note_1058024207
+  - until docker info; do sleep 1; done
 
 build-and-push:
   rules:
