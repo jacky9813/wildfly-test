@@ -4,7 +4,7 @@ workflow:
       variables:
         DEPLOY_MODE: dev
       when: always
-    - if: $CI_COMMIT_TAG && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG =~ /v.*/
       variables:
         DEPLOY_MODE: prod
       when: always
