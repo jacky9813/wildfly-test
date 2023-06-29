@@ -22,26 +22,11 @@ variables:
   K8S_PROD_NS: wildfly-prod
   K8S_TEST_NS: wildfly-test
 
-  DOCKER_HOST: tcp://docker:2376
-  DOCKER_TLS_CERTDIR: "/certs"
-  DOCKER_TLS_VERIFY: 1
-  DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
-
 stages:
   - build
   - dev-deploy
   - prod-tag
   - prod-deploy
-
-# For running docker in Kubernetes, the following settings are required.
-# See https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-the-kubernetes-executor-with-docker-in-docker
-# for more details.
-services:
-  - docker:dind
-image: docker:cli
-before_script:
-  # https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27215#note_1058024207
-  - until docker info; do sleep 1; done
 
 build-and-push:
   rules:
@@ -49,7 +34,21 @@ build-and-push:
       when: always
   stage: build
   image: google/cloud-sdk
+  
+  # For running docker in Kubernetes, the following settings are required.
+  # See https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-the-kubernetes-executor-with-docker-in-docker
+  # for more details.
+  services:
+    - docker:dind
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_TLS_VERIFY: 1
+    DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
   before_script:
+    # Wait docker:dind becoming online
+    # https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27215#note_1058024207
+    - until docker info; do sleep 1; done
     # Login to GCP
     - echo ${CI_JOB_JWT_V2} > .ci_job_jwt_file
     - gcloud iam workload-identity-pools create-cred-config ${GCP_WIP}
@@ -70,6 +69,8 @@ dev-deploy:
   rules:
     - if: $DEPLOY_MODE == "dev"
       when: on_success
+  needs:
+    - build-and-push
   stage: dev-deploy
   image: 
     name: gcr.io/cloud-builders/kubectl
@@ -122,6 +123,8 @@ prod-deploy:
   rules:
     - if: $DEPLOY_MODE == "prod"
       when: on_success
+  needs:
+    - prod-tag
   stage: dev-deploy
   image: 
     name: gcr.io/cloud-builders/kubectl
