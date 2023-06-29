@@ -22,11 +22,25 @@ variables:
   K8S_PROD_NS: wildfly-prod
   K8S_TEST_NS: wildfly-test
 
+  DOCKER_HOST: tcp://docker:2376
+  DOCKER_TLS_CERTDIR: "/certs"
+  DOCKER_TLS_VERIFY: 1
+  DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
+
 stages:
   - build
   - dev-deploy
   - prod-tag
   - prod-deploy
+
+# For running docker in Kubernetes, the following settings are required.
+# See https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-the-kubernetes-executor-with-docker-in-docker
+# for more details.
+services:
+  - docker:dind
+image: docker:cli
+before_script:
+  - docker info
 
 build-and-push:
   rules:
