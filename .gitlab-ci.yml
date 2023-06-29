@@ -1,0 +1,134 @@
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && !
+      variables:
+        DEPLOY_MODE: dev
+      when: always
+    - if: $CI_COMMIT_TAG && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      variables:
+        DEPLOY_MODE: prod
+      when: always
+    - when: never
+
+variables:
+  CONTAINER_IMAGE_NAME: wildfly-image
+  CONTAINER_REGISTRY_HOST: asia-docker.pkg.dev
+  GCP_ARTIFACT_REGISTRY_NAME: my-docker-registry
+  GCP_GKE_CLUSTER: my-gke-cluster
+  GCP_GKE_LOCATION: asia-east1
+  GCP_PROJECT_ID: my-project
+  GCP_SA: my-gitlab-runner-serviceaccount@my-project.iam.gserviceaccount.com
+  GCP_WIP: projects/1234567890/locations/global/workloadIdentityPools/my-pool/providers/my-pool-providers
+  K8S_PROD_NS: wildfly-prod
+  K8S_TEST_NS: wildfly-test
+
+stages:
+  - build
+  - dev-deploy
+  - prod-tag
+  - prod-deploy
+
+build-and-push:
+  rules:
+    - if: $DEPLOY_MODE == "dev"
+      when: always
+  stage: build
+  image: gcr.io/cloud-builders/docker
+  before_script:
+    # Login to GCP
+    - echo ${CI_JOB_JWT_V2} > .ci_job_jwt_file
+    - gcloud iam workload-identity-pools create-cred-config ${GCP_WIP}
+      --service-account="${GCP_SA}"
+      --output-file=.gcp_temp_cred.json
+      --credential-source-file=.ci_job_jwt_file
+      --project=${GCP_PROJECT_ID}
+    - gcloud auth login --cred-file=.gcp_temp_cred.json
+    - gcloud --quiet auth configure-docker ${CONTAINER_REGISTRY_HOST}
+    # Check GCP Credentials
+    - gcloud auth list
+    - gcloud config get-value project
+  script:
+    - docker build -t ${CONTAINER_REGISTRY_HOST}/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REGISTRY_NAME}/${CONTAINER_IMAGE_NAME}:${CI_COMMIT_SHA}
+    - docker push ${CONTAINER_REGISTRY_HOST}/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REGISTRY_NAME}/${CONTAINER_IMAGE_NAME}:${CI_COMMIT_SHA}
+
+dev-deploy:
+  rules:
+    - if: $DEPLOY_MODE == "dev"
+      when: on_success
+  stage: dev-deploy
+  image: 
+    name: gcr.io/cloud-builders/kubectl
+    entrypoint:
+      - /bin/bash
+  before_script:
+    # Login to GCP
+    - echo ${CI_JOB_JWT_V2} > .ci_job_jwt_file
+    - gcloud iam workload-identity-pools create-cred-config ${GCP_WIP}
+      --service-account="${GCP_SA}"
+      --output-file=.gcp_temp_cred.json
+      --credential-source-file=.ci_job_jwt_file
+      --project=${GCP_PROJECT_ID}
+    - gcloud auth login --cred-file=.gcp_temp_cred.json
+    - gcloud --quiet auth configure-docker ${CONTAINER_REGISTRY_HOST}
+    # Configure kubectl credentials
+    - gcloud container clusters get-credentials ${GCP_GKE_CLUSTER} --location=${GCP_GKE_LOCATION}
+    # Download Kustomize
+    - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+  script:
+    - export PATH="$PATH:$(pwd)"
+    - pushd deploy/overlay/test
+    - ./kustomize edit set namespace ${K8S_TEST_NS}
+    - ./kustomize edit set image wildfly-image=${CONTAINER_REGISTRY_HOST}/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REGISTRY_NAME}/${CONTAINER_IMAGE_NAME}:${CI_COMMIT_SHA}
+    - ./kustomize build . | kubectl apply -f -
+
+prod-tag:
+  rules:
+    - if: $DEPLOY_MODE == "prod"
+      when: always
+  stage: prod-tag
+  image: gcr.io/cloud-builders/docker
+  before_script:
+    # Login to GCP
+    - echo ${CI_JOB_JWT_V2} > .ci_job_jwt_file
+    - gcloud iam workload-identity-pools create-cred-config ${GCP_WIP}
+      --service-account="${GCP_SA}"
+      --output-file=.gcp_temp_cred.json
+      --credential-source-file=.ci_job_jwt_file
+      --project=${GCP_PROJECT_ID}
+    - gcloud auth login --cred-file=.gcp_temp_cred.json
+    - gcloud --quiet auth configure-docker ${CONTAINER_REGISTRY_HOST}
+    # Check GCP Credentials
+    - gcloud auth list
+    - gcloud config get-value project
+  script:
+    - gcloud artifacts docker tags add ${CONTAINER_REGISTRY_HOST}/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REGISTRY_NAME}/${CONTAINER_IMAGE_NAME}:${CI_COMMIT_SHA} ${CONTAINER_REGISTRY_HOST}/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REGISTRY_NAME}/${CONTAINER_IMAGE_NAME}:${CI_COMMIT_TAG}
+
+prod-deploy:
+  rules:
+    - if: $DEPLOY_MODE == "prod"
+      when: on_success
+  stage: dev-deploy
+  image: 
+    name: gcr.io/cloud-builders/kubectl
+    entrypoint:
+      - /bin/bash
+  before_script:
+    # Login to GCP
+    - echo ${CI_JOB_JWT_V2} > .ci_job_jwt_file
+    - gcloud iam workload-identity-pools create-cred-config ${GCP_WIP}
+      --service-account="${GCP_SA}"
+      --output-file=.gcp_temp_cred.json
+      --credential-source-file=.ci_job_jwt_file
+      --project=${GCP_PROJECT_ID}
+    - gcloud auth login --cred-file=.gcp_temp_cred.json
+    - gcloud --quiet auth configure-docker ${CONTAINER_REGISTRY_HOST}
+    # Configure kubectl credentials
+    - gcloud container clusters get-credentials ${GCP_GKE_CLUSTER} --location=${GCP_GKE_LOCATION}
+    # Download Kustomize
+    - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+  script:
+    - export PATH="$PATH:$(pwd)"
+    - pushd deploy/overlay/test
+    - ./kustomize edit set namespace ${K8S_PROD_NS}
+    - ./kustomize edit set image wildfly-image=${CONTAINER_REGISTRY_HOST}/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REGISTRY_NAME}/${CONTAINER_IMAGE_NAME}:${CI_COMMIT_TAG}
+    - ./kustomize build . | kubectl apply -f -
